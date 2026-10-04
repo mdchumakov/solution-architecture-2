@@ -1,0 +1,116 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "PostgreSQL: репликация и восстановление",
+    "quality_profile": "showcase",
+    "viewBox": [
+      1150,
+      580
+    ]
+  },
+  "components": [
+    {
+      "id": "domain",
+      "type": "backend",
+      "label": "Campaign / Finance",
+      "sublabel": "Каждый в своей БД",
+      "pos": [
+        40,
+        70
+      ],
+      "size": [
+        240,
+        80
+      ]
+    },
+    {
+      "id": "primary",
+      "type": "database",
+      "label": "Primary",
+      "sublabel": "Единственный писатель",
+      "pos": [
+        455,
+        70
+      ],
+      "size": [
+        240,
+        80
+      ]
+    },
+    {
+      "id": "standby",
+      "type": "database",
+      "label": "Sync standby",
+      "sublabel": "Другой домен отказа",
+      "pos": [
+        870,
+        70
+      ],
+      "size": [
+        240,
+        80
+      ]
+    },
+    {
+      "id": "backup",
+      "type": "cloud",
+      "label": "Архив резервных копий",
+      "sublabel": "Base backup + WAL",
+      "pos": [
+        455,
+        390
+      ],
+      "size": [
+        240,
+        80
+      ]
+    },
+    {
+      "id": "dr",
+      "type": "database",
+      "label": "DR standby",
+      "sublabel": "Другой регион, к году",
+      "pos": [
+        870,
+        390
+      ],
+      "size": [
+        240,
+        80
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "from": "domain",
+      "to": "primary",
+      "label": "SQL / команды"
+    },
+    {
+      "from": "primary",
+      "to": "standby",
+      "label": "WAL / sync"
+    },
+    {
+      "from": "primary",
+      "to": "backup",
+      "label": "Backup + WAL / async",
+      "variant": "dashed",
+      "labelDy": 130
+    },
+    {
+      "from": "standby",
+      "to": "dr",
+      "label": "WAL / async",
+      "variant": "dashed",
+      "labelDy": 130
+    },
+    {
+      "from": "backup",
+      "to": "dr",
+      "label": "PITR / восстановление",
+      "variant": "dashed"
+    }
+  ]
+}
