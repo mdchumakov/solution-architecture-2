@@ -1,0 +1,184 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "RTB: компоненты через три месяца",
+    "quality_profile": "showcase",
+    "viewBox": [
+      1150,
+      580
+    ]
+  },
+  "components": [
+    {
+      "id": "partner",
+      "type": "external",
+      "label": "DSP-партнёр",
+      "sublabel": "Запросы и уведомления",
+      "pos": [
+        40,
+        70
+      ],
+      "size": [
+        230,
+        80
+      ]
+    },
+    {
+      "id": "gateway",
+      "type": "security",
+      "label": "RTB Gateway",
+      "sublabel": "Envoy + Go-адаптер",
+      "pos": [
+        460,
+        70
+      ],
+      "size": [
+        230,
+        80
+      ]
+    },
+    {
+      "id": "bidding",
+      "type": "backend",
+      "label": "Bidding Service",
+      "sublabel": "Аукцион, RAM, квоты",
+      "pos": [
+        880,
+        70
+      ],
+      "size": [
+        230,
+        80
+      ]
+    },
+    {
+      "id": "collector",
+      "type": "backend",
+      "label": "Event Collector",
+      "sublabel": "Подтверждение после Kafka",
+      "pos": [
+        40,
+        270
+      ],
+      "size": [
+        230,
+        80
+      ]
+    },
+    {
+      "id": "journal",
+      "type": "messagebus",
+      "label": "Kafka",
+      "sublabel": "События и изменения",
+      "pos": [
+        460,
+        270
+      ],
+      "size": [
+        230,
+        80
+      ]
+    },
+    {
+      "id": "legacy",
+      "type": "backend",
+      "label": "Монолит + адаптер",
+      "sublabel": "Campaign / Finance API",
+      "pos": [
+        880,
+        270
+      ],
+      "size": [
+        230,
+        80
+      ]
+    },
+    {
+      "id": "analytics",
+      "type": "backend",
+      "label": "Analytics",
+      "sublabel": "Отдельный consumer",
+      "pos": [
+        460,
+        470
+      ],
+      "size": [
+        230,
+        80
+      ]
+    },
+    {
+      "id": "database",
+      "type": "database",
+      "label": "PostgreSQL",
+      "sublabel": "Данные, inbox, outbox",
+      "pos": [
+        880,
+        470
+      ],
+      "size": [
+        230,
+        80
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "from": "partner",
+      "to": "gateway",
+      "label": "HTTPS / OpenRTB",
+      "variant": "emphasis"
+    },
+    {
+      "from": "gateway",
+      "to": "bidding",
+      "label": "gRPC / Bid",
+      "variant": "emphasis"
+    },
+    {
+      "from": "partner",
+      "to": "collector",
+      "label": "HTTPS / callback",
+      "labelDy": 70
+    },
+    {
+      "from": "collector",
+      "to": "journal",
+      "label": "acks=all",
+      "variant": "dashed"
+    },
+    {
+      "from": "legacy",
+      "to": "journal",
+      "label": "Outbox / изменения",
+      "variant": "dashed",
+      "labelDy": 30
+    },
+    {
+      "from": "journal",
+      "to": "bidding",
+      "label": "Проекции / фон",
+      "variant": "dashed"
+    },
+    {
+      "from": "bidding",
+      "to": "legacy",
+      "label": "REST / снимки, квоты",
+      "labelDy": 70
+    },
+    {
+      "from": "journal",
+      "to": "analytics",
+      "label": "События / consume",
+      "variant": "dashed",
+      "labelDy": 70
+    },
+    {
+      "from": "legacy",
+      "to": "database",
+      "label": "SQL / транзакции",
+      "labelDy": 70
+    }
+  ]
+}
