@@ -24,7 +24,7 @@ node "$ARCHIFY_DIR/bin/archify.mjs" visual-check Task2/diagrams/component.html -
 node "$ARCHIFY_DIR/bin/archify.mjs" visual-check Task2/diagrams/sequence.html --json
 ```
 
-SVG получены штатной командой `Export → SVG` из проверенных HTML. Они не содержат скриптов и подходят для просмотра в Markdown. После изменения JSON нужно пересобрать HTML и заново экспортировать SVG.
+SVG получены штатной командой `Export → SVG` из проверенных HTML. После экспорта удалены пробелы в концах строк. SVG не содержат скриптов и подходят для просмотра в Markdown. После изменения JSON нужно пересобрать HTML и заново экспортировать SVG.
 
 ## Проверка артефактов
 
