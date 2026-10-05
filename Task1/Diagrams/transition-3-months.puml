@@ -1,0 +1,64 @@
+@startuml
+!pragma layout smetana
+!include <C4/C4_Container>
+
+title AdScale — C4 Container — переходное состояние через три месяца
+LAYOUT_TOP_DOWN()
+skinparam dpi 130
+skinparam nodesep 60
+skinparam ranksep 100
+skinparam shadowing false
+AddRelTag("async", $lineColor="#9A6700", $textColor="#795300", $lineStyle=DashedLine())
+
+Person(advertiser, "Рекламодатель", "Кампании и бюджет")
+Person_Ext(visitor, "Пользователь", "Показы и клики")
+System_Ext(dsp, "DSP-партнёры", "Существующие и новый")
+System_Ext(payment, "Платёжный шлюз", "Платежи и подтверждения")
+
+System_Boundary(adscale, "AdScale — один регион, несколько доменов отказа") {
+    Boundary(rtb, "Выделенный RTB") {
+        Container(gateway, "RTB Gateway", "Go", "Адаптеры и переключение маршрутов")
+        Container(bidding, "Bidding Service", "C++ / Go", "Кандидаты, аукцион, RAM и квоты")
+        ContainerDb(cache, "Bidding Cache", "Redis", "Проекция для прогрева, не баланс")
+    }
+
+    Boundary(legacyBoundary, "Временно сохранённые функции") {
+        Container(legacy, "Модульный монолит", "Go / Python / Node.js", "Кабинет, кампании, финансы и выдача")
+        ContainerDb(legacyDb, "Legacy DB", "PostgreSQL HA", "Единственный источник доменных данных; outbox")
+        Container(adapter, "Legacy Adapter / Outbox Relay", "Go", "Снимки, квоты, публикация изменений, передача расчётов")
+    }
+
+    Boundary(eventBoundary, "Выделенная обработка событий") {
+        Container(collector, "Event Collector", "Go", "Приём, проверка, надёжное подтверждение")
+        ContainerQueue(kafka, "Event Log", "Apache Kafka", "События и изменения кампаний")
+        Container(analytics, "Analytics Service", "Python", "Проекции и API отчётов")
+        ContainerDb(analyticsDb, "Analytics DB", "ClickHouse", "События и отчётность")
+    }
+}
+
+Rel(dsp, gateway, "Запрос и ответ ставки", "HTTPS / OpenRTB")
+Rel(gateway, bidding, "Рассчитать ставку", "gRPC; deadline")
+Rel(bidding, cache, "Прогрев и обновление", "RESP; вне пути ставки")
+Rel(bidding, adapter, "Снимки и пакеты квот", "HTTPS; в фоне")
+Rel(adapter, legacy, "Доменные API и расчётные команды", "HTTPS; идемпотентно")
+Rel(legacy, legacyDb, "Читает / изменяет; записывает outbox", "SQL")
+Rel(adapter, legacyDb, "Читает outbox; отмечает доставку", "SQL; ограниченная роль")
+
+Rel(advertiser, legacy, "Работает в кабинете", "HTTPS")
+Rel(visitor, legacy, "Получает рекламу", "HTTPS")
+Rel(legacy, payment, "Создаёт платёж", "HTTPS / REST")
+Rel(payment, legacy, "Подтверждает платёж", "HTTPS / callback")
+Rel(legacy, analytics, "Получает отчёты", "HTTPS / REST")
+Rel(visitor, collector, "Показы и клики", "HTTPS")
+Rel(dsp, collector, "Расчётные уведомления", "HTTPS; повторная доставка")
+
+Rel(collector, kafka, "Сохраняет события", "Kafka / TLS; acks=all", $tags="async")
+Rel(adapter, kafka, "Публикует изменения", "Kafka / TLS; outbox", $tags="async")
+Rel(kafka, bidding, "Изменения модели чтения", "Kafka / TLS; consumer", $tags="async")
+Rel(kafka, adapter, "Расчётные события для финансов", "Kafka / TLS; consumer", $tags="async")
+Rel(kafka, analytics, "События для проекций", "Kafka / TLS; consumer", $tags="async")
+Rel(analytics, analyticsDb, "Строит и читает отчёты", "SQL / native protocol")
+
+SHOW_LEGEND()
+footer Состояние после завершения canary: RTB направлен в Bidding Service. Сценарии переключения и отката описаны в TO-BE.md. Legacy владеет кампаниями и деньгами.
+@enduml

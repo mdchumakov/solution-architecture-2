@@ -1,0 +1,76 @@
+@startuml
+!pragma layout smetana
+!include <C4/C4_Container>
+
+title AdScale — C4 Container — целевая архитектура через год
+LAYOUT_TOP_DOWN()
+skinparam dpi 130
+skinparam nodesep 45
+skinparam ranksep 65
+skinparam shadowing false
+AddRelTag("async", $lineColor="#9A6700", $textColor="#795300", $lineStyle=DashedLine())
+
+Person(advertiser, "Рекламодатель", "Кампании, бюджет, отчёты")
+Person_Ext(visitor, "Пользователь", "Показы и клики")
+System_Ext(dsp, "DSP-партнёры", "OpenRTB и расчётные уведомления")
+System_Ext(payment, "Платёжный шлюз", "Платежи и подтверждения")
+
+System_Boundary(adscale, "AdScale") {
+    Boundary(rtb, "Критический контур RTB") {
+        Container(rtbGateway, "RTB Gateway", "Go", "Адаптеры DSP, deadline, лимиты")
+        Container(bidding, "Bidding Service", "C++ / Go", "Таргетинг и аукцион; RAM-проекция и локальные квоты")
+        ContainerDb(biddingCache, "Bidding Cache", "Redis", "Восстанавливаемая проекция; не баланс денег")
+    }
+
+    Boundary(management, "Управление и выдача") {
+        Container(dashboard, "Advertiser Dashboard", "Node.js / JavaScript", "Кабинет рекламодателя")
+        Container(apiGateway, "Management API Gateway", "Envoy", "Авторизация, маршрутизация, лимиты")
+        Container(campaign, "Campaign Service", "Go", "Кампании, ставки, таргетинг; outbox relay")
+        ContainerDb(campaignDb, "Campaign DB", "PostgreSQL", "Кампании, версии, outbox")
+        Container(finance, "Finance Service", "Go", "Квоты, платежи, проводки; outbox relay")
+        ContainerDb(financeDb, "Finance DB", "PostgreSQL", "Резервы, ledger, inbox / outbox")
+        Container(delivery, "Delivery Service", "Node.js", "Материалы и подписанные ссылки")
+        ContainerDb(creativeStore, "Creative Store", "Object storage", "Креативы; владелец Delivery")
+    }
+
+    Boundary(events, "События и аналитика") {
+        Container(collector, "Event Collector", "Go", "Проверка событий; ack после записи")
+        ContainerQueue(kafka, "Event Log", "Apache Kafka", "Доменные события; повторная обработка")
+        Container(analytics, "Analytics Service", "Python", "Идемпотентные проекции и API отчётов")
+        ContainerDb(analyticsDb, "Analytics DB", "ClickHouse", "События и отчётные проекции")
+    }
+}
+
+Rel(dsp, rtbGateway, "Bid-request / bid-response", "HTTPS / OpenRTB")
+Rel(rtbGateway, bidding, "Рассчитать ставку / no-bid", "gRPC; deadline")
+Rel(bidding, biddingCache, "Прогрев и обновление проекции", "RESP; вне пути ставки")
+Rel(bidding, campaign, "Снимок модели для прогрева", "HTTPS; в фоне")
+Rel(bidding, finance, "Получить пакет квот", "HTTPS; в фоне")
+
+Rel(advertiser, dashboard, "Управляет рекламой", "HTTPS")
+Rel(dashboard, apiGateway, "Команды и запросы", "HTTPS / REST")
+Rel(apiGateway, campaign, "Кампании и ставки", "HTTPS / REST")
+Rel(apiGateway, finance, "Баланс, платежи, счета", "HTTPS / REST")
+Rel(apiGateway, analytics, "Получить отчёт", "HTTPS / REST")
+Rel(campaign, campaignDb, "Читает и изменяет", "SQL")
+Rel(finance, financeDb, "Транзакции и дедупликация", "SQL")
+Rel(finance, payment, "Создаёт платёж", "HTTPS / REST")
+Rel(payment, finance, "Подтверждает платёж", "HTTPS / callback")
+Rel(campaign, delivery, "Загружает креатив, получает метаданные", "HTTPS / REST")
+Rel(delivery, creativeStore, "Записывает и читает материалы", "HTTPS / Object API")
+Rel(visitor, delivery, "Запрашивает рекламу по ссылке", "HTTPS")
+
+Rel(visitor, collector, "Показы и клики", "HTTPS; после показа")
+Rel(dsp, collector, "Расчётные уведомления", "HTTPS; повторы по контракту")
+Rel(collector, kafka, "Сохраняет события", "Kafka / TLS; acks=all", $tags="async")
+Rel(campaign, kafka, "Публикует изменения кампаний", "Kafka / TLS; outbox", $tags="async")
+Rel(finance, kafka, "Публикует финансовые изменения", "Kafka / TLS; outbox", $tags="async")
+Rel(kafka, bidding, "Обновляет модель кампаний", "Kafka / TLS; consumer", $tags="async")
+Rel(kafka, finance, "Доставляет расчётные события", "Kafka / TLS; consumer", $tags="async")
+Rel(kafka, campaign, "Подтверждает финансирование", "Kafka / TLS; consumer", $tags="async")
+Rel(kafka, analytics, "Передаёт события для отчётов", "Kafka / TLS; consumer", $tags="async")
+Rel(analytics, analyticsDb, "Строит проекции, читает отчёты", "SQL / native protocol")
+
+SHOW_LEGEND()
+footer Логические контейнеры. Реплики и два региона описаны в TO-BE.md. Пунктир — событийный поток; фоновые HTTPS-вызовы не входят в расчёт ставки.
+@enduml

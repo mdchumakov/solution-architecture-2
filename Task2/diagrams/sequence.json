@@ -1,0 +1,116 @@
+{
+  "schema_version": 1,
+  "diagram_type": "sequence",
+  "meta": {
+    "title": "От ставки до расчётного события",
+    "quality_profile": "showcase",
+    "column_fit": "spread",
+    "viewBox": [
+      1440,
+      850
+    ]
+  },
+  "participants": [
+    {
+      "id": "partner",
+      "type": "external",
+      "label": "DSP"
+    },
+    {
+      "id": "gateway",
+      "type": "security",
+      "label": "RTB Gateway"
+    },
+    {
+      "id": "bidding",
+      "type": "backend",
+      "label": "Bidding"
+    },
+    {
+      "id": "collector",
+      "type": "backend",
+      "label": "Collector"
+    },
+    {
+      "id": "journal",
+      "type": "messagebus",
+      "label": "Kafka"
+    },
+    {
+      "id": "finance",
+      "type": "backend",
+      "label": "Finance"
+    }
+  ],
+  "messages": [
+    {
+      "from": "partner",
+      "to": "gateway",
+      "y": 180,
+      "label": "POST /openrtb2/auction",
+      "variant": "emphasis"
+    },
+    {
+      "from": "gateway",
+      "to": "bidding",
+      "y": 240,
+      "label": "Bid + deadline",
+      "variant": "emphasis"
+    },
+    {
+      "from": "bidding",
+      "to": "gateway",
+      "y": 300,
+      "label": "Ставка + токен резерва / no-bid",
+      "variant": "return"
+    },
+    {
+      "from": "gateway",
+      "to": "partner",
+      "y": 360,
+      "label": "200 / 204 до deadline",
+      "variant": "return"
+    },
+    {
+      "from": "partner",
+      "to": "collector",
+      "y": 470,
+      "label": "HTTPS / billing callback + токен"
+    },
+    {
+      "from": "collector",
+      "to": "journal",
+      "y": 530,
+      "label": "billing.v1 / produce",
+      "variant": "dashed"
+    },
+    {
+      "from": "journal",
+      "to": "collector",
+      "y": 590,
+      "label": "acks=all",
+      "variant": "return"
+    },
+    {
+      "from": "collector",
+      "to": "partner",
+      "y": 650,
+      "label": "204 / принято",
+      "variant": "return"
+    },
+    {
+      "from": "journal",
+      "to": "finance",
+      "y": 710,
+      "label": "consume / inbox + проводка",
+      "variant": "dashed"
+    },
+    {
+      "from": "finance",
+      "to": "journal",
+      "y": 760,
+      "label": "offset после commit",
+      "variant": "return"
+    }
+  ]
+}

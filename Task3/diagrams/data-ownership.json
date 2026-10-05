@@ -1,0 +1,181 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "AdScale: владельцы данных",
+    "quality_profile": "showcase",
+    "viewBox": [
+      1370,
+      690
+    ]
+  },
+  "components": [
+    {
+      "id": "svc0",
+      "type": "backend",
+      "label": "Bidding",
+      "pos": [
+        35,
+        100
+      ],
+      "size": [
+        220,
+        80
+      ]
+    },
+    {
+      "id": "data0",
+      "type": "database",
+      "label": "RAM + Redis",
+      "sublabel": "Восстановимые проекции",
+      "pos": [
+        35,
+        450
+      ],
+      "size": [
+        220,
+        80
+      ]
+    },
+    {
+      "id": "svc1",
+      "type": "backend",
+      "label": "Campaign",
+      "pos": [
+        305,
+        100
+      ],
+      "size": [
+        220,
+        80
+      ]
+    },
+    {
+      "id": "data1",
+      "type": "database",
+      "label": "Campaign DB",
+      "sublabel": "PostgreSQL + outbox",
+      "pos": [
+        305,
+        450
+      ],
+      "size": [
+        220,
+        80
+      ]
+    },
+    {
+      "id": "svc2",
+      "type": "backend",
+      "label": "Event Collector",
+      "pos": [
+        575,
+        100
+      ],
+      "size": [
+        220,
+        80
+      ]
+    },
+    {
+      "id": "data2",
+      "type": "messagebus",
+      "label": "Kafka",
+      "sublabel": "Долговечный журнал",
+      "pos": [
+        575,
+        450
+      ],
+      "size": [
+        220,
+        80
+      ]
+    },
+    {
+      "id": "svc3",
+      "type": "backend",
+      "label": "Analytics",
+      "pos": [
+        845,
+        100
+      ],
+      "size": [
+        220,
+        80
+      ]
+    },
+    {
+      "id": "data3",
+      "type": "database",
+      "label": "Analytics DB",
+      "sublabel": "ClickHouse",
+      "pos": [
+        845,
+        450
+      ],
+      "size": [
+        220,
+        80
+      ]
+    },
+    {
+      "id": "svc4",
+      "type": "backend",
+      "label": "Finance",
+      "pos": [
+        1115,
+        100
+      ],
+      "size": [
+        220,
+        80
+      ]
+    },
+    {
+      "id": "data4",
+      "type": "database",
+      "label": "Finance DB",
+      "sublabel": "PostgreSQL + inbox",
+      "pos": [
+        1115,
+        450
+      ],
+      "size": [
+        220,
+        80
+      ]
+    }
+  ],
+  "connections": [
+    {
+      "from": "svc0",
+      "to": "data0",
+      "label": "Локально / фон",
+      "labelDy": 145
+    },
+    {
+      "from": "svc1",
+      "to": "data1",
+      "label": "Запись и чтение",
+      "labelDy": 145
+    },
+    {
+      "from": "svc2",
+      "to": "data2",
+      "label": "produce / acks=all",
+      "labelDy": 145
+    },
+    {
+      "from": "svc3",
+      "to": "data3",
+      "label": "Запись и чтение",
+      "labelDy": 145
+    },
+    {
+      "from": "svc4",
+      "to": "data4",
+      "label": "Запись и чтение",
+      "labelDy": 145
+    }
+  ]
+}
